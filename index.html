@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html ng-app="simbudget">
+
+	<head>
+		<title>simBudget - simulate your cash flow</title>
+		
+		<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, target-densityDpi=device-dpi">
+
+		<meta property="og:title" content="simBudget"/>
+		<meta property="og:type" content="utility"/>
+		<meta property="og:url" content="http://simbudget.nooslab.com"/>
+		<meta property="og:description" content="You can simulate your cash-flow with customized rules."/>
+		<meta property="og:image" content="http://i.imgur.com/mNh7Zg0.jpg"/>
+		<meta property="og:image:width" content="720" />
+		<meta property="og:image:height" content="335" />
+
+		<link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.min.css"/>
+		<link rel="stylesheet" href="bower_components/angular-chart.js/dist/angular-chart.css">
+		<link rel="stylesheet" href="style.css" />
+
+		<script src="bower_components/angular/angular.min.js"></script>
+		<script src="bower_components/jquery/dist/jquery.min.js"></script>
+		<script src="bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+		<script src="bower_components/Chart.js/Chart.js"></script>
+		<script src="bower_components/angular-animate/angular-animate.min.js"></script>
+		<script src="bower_components/angular-bootstrap/ui-bootstrap-tpls.min.js"></script>
+		<script src="bower_components/angular-chart.js/dist/angular-chart.min.js"></script>
+		<script src="bower_components/angular-translate/angular-translate.min.js"></script>
+		<script src="https://cdn.firebase.com/js/client/2.4.2/firebase.js"></script>
+		<script src="https://cdn.firebase.com/libs/angularfire/1.2.0/angularfire.min.js"></script>
+		<script src="script.js"></script>
+
+
+		
+	</head>
+
+	<body ng-controller="MainCtrl" style="background-color:#ddd">
+
+		
+		<div ng-class="{'container':!viewOpt.fullSize}" style="background-color: #001A4A;padding:5px 0px 0px 0px;">
+
+			<div class="row" style="color:white;">
+				<div class="col-md-3 col-xs-12 pull-right">
+					<img class="nav-flag pull-right cursor-pointer" src="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/1.4.0/flags/4x3/kr.svg" ng-class="{grayscale:(opt.lang!='ko')}" ng-click="onClickLang('ko')">
+					<img class="nav-flag pull-right cursor-pointer" src="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/1.4.0/flags/4x3/us.svg" ng-class="{grayscale:(opt.lang!='en')}" ng-click="onClickLang('en')">
+					<button ng-if="!authData" type="button" class="btn btn-success btn-xs pull-right" ng-click="onLoginClick()">{{'SIGNUP_WITH_GOOGLE'|translate}}</button>
+					<small  ng-if="!!authData" class="pull-right">{{getAccountOwnerName(authData)}} <button type="button" class="btn btn-default btn-xs" ng-click="onLogoutClick()">{{'LOGOUT'|translate}}</button></small> 
+				</div>
+				<div class="col-md-9 col-xs-12">
+					<h1>
+						<img src="img/logo.png" style="width:70px;height:auto;" >
+						<label>simBudget <small style="font-size:12px;color:white;">{{'SUB_TITLE'|translate}}</small></label>
+					</h1>
+				</div>
+			</div>
+			
+			
+
+			<div class="row" ng-if="!!authData">
+
+				<div class="row" style="background-color: #001A4A;color: #FFF;padding: 10px;">
+					<div class="col-xs-12">
+						
+						<label>{{'DOCUMENTS'|translate}}: </label>
+						<button type="button" 
+						class="btn btn-sm btn-default" 
+						ng-repeat="doc in documents track by $index" 
+						ng-class="{'btn-info':doc.$id == currentDoc.$id}" style="margin-right:4px" ng-click="selectDoc(doc)">{{doc.name}}</button>
+						<button type="button" class="btn btn-sm btn-default" ng-click="addNewDoc()">+</button>
+
+						<div class="form-inline pull-right">
+							<input type="text" class="form-control input-sm" ng-model="currentDoc.name"/>
+						</div>
+
+					</div>
+				</div>
+
+				<div class="row">
+					<div class="col-xs-12" style="text-align:right;background-color:#f5f5f5;color:gray;">
+						<label style="font-size:12px;" ng-if="!!currentDoc">
+							<input type="checkbox" ng-model="viewOpt.rules"/>
+							{{'RULES_TOGGLE'|translate}}
+						</label>
+
+						<label style="font-size:12px;" ng-if="!!currentDoc">
+							<input type="checkbox" ng-model="viewOpt.result"/>
+							{{'RESULT_TOGGLE'|translate}}
+							
+						</label>
+
+						<label style="font-size:12px;" ng-if="!!currentDoc">
+							<input type="checkbox" ng-model="viewOpt.fullSize"/>
+							{{'FULL_TOGGLE'|translate}}
+						</label>
+					</div>
+				</div>
+
+				<div class="row" ng-if="!!currentDoc" style="background-color: #FFF;padding:20px 0px 20px 0px;min-height:60vh;">
+					<!-- rules start -->
+					<div class="col-xs-12" ng-if="!!viewOpt.rules" ng-class="{'col-md-4':viewOpt.result, 'col-md-12':!viewOpt.result}">
+						<div class="panel panel-default">
+							<div class="panel-heading">
+								<h4>
+									<label>{{'RULES'|translate}}</label>
+									<button class="btn btn-xs btn-info pull-right" ng-click="onClickAdd();">{{'ADD_RULES'|translate}}</button>
+								</h4>
+							</div>
+							
+							<div class="panel-body">
+								<uib-accordion close-others="true">
+									<uib-accordion-group heading="{{'INIT_VALUE'|translate}} : {{currentDoc.initialValue | number}}">
+										<div class="form-group">
+											<label>{{'INIT_VALUE'|translate}}: </label>
+											<input type="text" class="form-control" ng-model="currentDoc.initialValue" />
+										</div>
+									</uib-accordion-group>
+									
+									<uib-accordion-group ng-repeat="inputData in currentDoc.condList track by $index">
+										<uib-accordion-heading ng-if="inputData.type == 'periodic'">
+											[{{$index+1}}.{{inputData.name}}] {{getPeriodicRuleTitle(inputData)}}
+										</uib-accordion-heading>
+										<uib-accordion-heading ng-if="inputData.type == 'specific'">
+											[{{$index+1}}.{{inputData.name}}] {{getSpecificRuleTitle(inputData)}}
+										</uib-accordion-heading>
+										
+										<label>{{'RULE_TYPE'|translate}}: {{translate(inputData.type.toUpperCase())}}</label>
+										<button class="btn btn-danger btn-xs pull-right" ng-click="onClickRemove($index)">{{'REMOVE'|translate}}</button>
+										<div class="form-inline col-xs-12">
+											<div class="form-group">
+												<label>
+													<input type="radio" name="{{'type'+$index}}" value="periodic" ng-model="inputData.type"/>
+													{{'PERIODIC'|translate}}
+												</label>
+												<label>
+													<input type="radio" name="{{'type'+$index}}" value="specific" ng-model="inputData.type"/>
+													{{'SPECIFIC'|translate}}
+												</label>
+												{{info.type}}
+											</div>
+										</div>
+										
+										
+										<div ng-switch="inputData.type">
+											
+											<!--periodic-->
+											<div ng-switch-when="periodic">
+												<div class="form-group">
+													<label>{{'NAME'|translate}}: </label>
+													<input type="text" class="form-control" ng-model="inputData.name" placeholder="UNTITLED RULE" />
+												</div>
+												
+												<div class="form-group">
+													<label>{{'PERIOD'|translate}}: </label>
+													<div class="input-group">
+														<div class="input-group-addon">{{'EACH'|translate}}</div>
+														<input type="text" class="form-control" ng-model="inputData.period" placeholder="1" />
+														<div class="input-group-addon">
+															<select ng-model="inputData.periodType" >
+																<option value="day">{{'DAY'|translate}}</option>
+																<option value="week">{{'WEEK'|translate}}</option>
+																<option value="month">{{'MONTH'|translate}}</option>
+																<option value="year">{{'YEAR'|translate}}</option>
+															</select>	
+														</div>
+													</div>
+												</div>
+												
+												<div class="form-group">
+													<label>
+														<input type="checkbox" ng-model="inputData.startDateExist"> {{'START_DATE'|translate}}: 
+														<em ng-if="!!inputData.startDateExist">{{inputData.startDate | date:'yyyy-MM-dd' }}</em> 
+														<em ng-if="!inputData.startDateExist">{{'NA'|translate}}</em> 
+													</label>
+													<p class="input-group" ng-if="!!inputData.startDateExist">
+														<input type="text" class="form-control" 
+															uib-datepicker-popup 
+															ng-model="inputData.startDate"
+															is-open="inputData.startDateOpened" 
+															datepicker-options="dateOptions" 
+															close-text="Close"
+															ng-disabled="!inputData.startDateExist"
+															ng-change="inputData.startDateStr = inputData.startDate.toLocaleDateString();"/>
+														<span class="input-group-btn">
+															<button type="button" class="btn btn-default" ng-click="inputData.startDateOpened = !inputData.startDateOpened"><i class="glyphicon glyphicon-calendar" ng-disabled="!inputData.startDateExist"></i></button>
+														</span>
+													</p>
+													
+												</div>
+												
+												<div class="form-group">
+													
+													<label>
+														<input type="checkbox" ng-model="inputData.endDateExist"> {{'END_DATE'|translate}}: 
+														<em ng-if="!!inputData.endDateExist">{{inputData.endDate | date:'yyyy-MM-dd' }}</em>
+														<em ng-if="!inputData.endDateExist">{{'NA'|translate}}</em>
+													</label>
+													<p class="input-group" ng-if="!!inputData.endDateExist">
+														<input type="text" class="form-control" 
+														uib-datepicker-popup 
+														ng-model="inputData.endDate" 
+														is-open="inputData.endDateOpened" 
+														datepicker-options="dateOptions" 
+														close-text="Close" 
+														ng-disabled="!inputData.endDateExist"
+														ng-change="inputData.endDateStr = inputData.endDate.toLocaleDateString();"/>
+														<span class="input-group-btn">
+															<button type="button" class="btn btn-default" ng-click="inputData.endDateOpened = !inputData.endDateOpened"><i class="glyphicon glyphicon-calendar" ng-disabled="!inputData.endDateExist"></i></button>
+														</span>
+													</p>
+												</div>
+											
+												<div class="form-group">
+													<label> {{'AMOUNT'|translate}}: {{inputData.amount | number }}</label>
+													<input type="text" class="form-control" ng-model="inputData.amount" placeholder="2" />
+												</div>
+											</div>
+											
+											
+											
+											<!--Specific-->
+											<div ng-switch-when="specific">
+												<div class="form-group">
+													<label>{{'NAME'|translate}}: </label>
+													<input type="text" class="form-control" ng-model="inputData.name" placeholder="label" />
+												</div>
+												<div class="form-group">
+													<label>{{'DATE'|translate}}: <em>{{inputData.specificDate | date:'fullDate' }}</em> </label>
+													<p class="input-group">
+														<input type="text" class="form-control" 
+														uib-datepicker-popup 
+														ng-model="inputData.specificDate" 
+														is-open="inputData.specificDateOpened"														
+														datepicker-options="dateOptions" 
+														ng-change="inputData.specificDateStr = inputData.specificDate.toLocaleString()"
+														close-text="Close" />
+														<span class="input-group-btn">
+															<button type="button" class="btn btn-default" ng-click="inputData.specificDateOpened = !inputData.specificDateOpened"><i class="glyphicon glyphicon-calendar"></i></button>
+														</span>
+													</p>
+												</div>
+												<div class="form-group">
+													<label> {{'AMOUNT'|translate}}: {{inputData.amount | number }}</label>
+													<input type="text" class="form-control" ng-model="inputData.amount" placeholder="2" />
+												</div>
+											</div>
+											
+											
+										</div>
+										
+										
+									</uib-accordion-group>
+								</uib-accordion>
+							</div>
+						</div>
+					</div>
+					<!-- rules end -->
+
+					<!-- result start -->
+					<div class="col-xs-12" ng-if="!!viewOpt.result" ng-class="{'col-md-8':viewOpt.rules, 'col-md-12':!viewOpt.rules}">
+						<div class="panel panel-default">							
+							<div class="panel-heading">								
+								<div class="form-inline" style="text-align:right;">
+									<div class="form-group pull-left">
+										<h4>{{'RESULT'|translate}}</h4>
+									</div>
+									<div class="form-group">										
+										<label>{{'SIMULATE'|translate}} </label>
+										<div class="input-group">
+											<input type="text" class="form-control" ng-model="runOpt.duration" style="text-align:right;">
+											<div class="input-group-addon  btn btn-primary" ng-click="run()"> {{'DAYS'|translate }}</div>	
+										</div>
+									</div>
+								</div>
+
+							</div>
+							<div class="panel-body">
+								<uib-tabset justified="false">
+									<uib-tab heading="{{'TABLE'|translate}}">
+										<table class="table table-striped table-bordered" ng-if="!!labels && labels.length > 0">
+											<tr>
+												<th>{{'DATE'|translate}}</th>
+												<th>{{'ACC'|translate}}</th>
+												<th>{{'DELTA'|translate}}</th>
+											</tr>
+											<tr ng-repeat="v in data[0] track by $index">
+												<td>{{labels[$index]}}</td>
+												<td>{{data[0][$index]}}</td>
+												<td>{{data[1][$index]}}</td>
+											</tr>
+										</table>
+									</uib-tab>
+									<uib-tab heading="{{'GRAPH'|translate}}" >
+										<div class="col-xs-12">
+											<canvas id="line" ng-if="viewOpt.graph && !!data"
+													class="chart chart-line" 
+													chart-data="data" 
+													chart-options="{pointDot : false, bezierCurve:false, scaleLineWidth:1, defaultFontSize:10, scaleShowVerticalLines:false}"
+													chart-labels="graphLabels" 
+													chart-legend="true" 
+													chart-series="series" 
+													style="width:100%;height:auto;"
+													/>
+										</div>
+										<div class="col-xs-12" style="text-align:center;" ng-if="(labels && labels.length > 0)">
+											<button class="btn btn-default btn-xs" ng-click="reloadGraph()">{{'RELOAD'|translate}}</button>
+										</div>
+									</uib-tab>
+								</uib-tabset>
+
+								<div class="col-xs-12" style="text-align:center;padding:30px;" ng-if="!labels || labels.length == 0">
+									<label>{{'NO_RESULT'|translate}}</label>
+								</div>
+							</div>
+						</div>
+					</div>
+					<!-- result end -->
+				</div>
+				
+				<div class="row">
+					<div class="col-xs-12"  style="text-align: center;background-color: #FFF;padding: 20px;"  ng-if="!currentDoc">
+						<h2>{{'SELECT_DOC_TXT'|translate}}</h2>
+					</div>
+				</div>
+			</div>
+			
+
+			<div class="row" ng-if="!authData">
+				<div class="col-xs-12" style="text-align: center;background-color: #FFF;padding: 20px;min-height:30vh;display:table;" >
+					<div style="display:table-cell;vertical-align:middle;width:100%;height:100%;">
+							<h2>{{'SIGNUP_FIRST_TXT'|translate}}</h2>
+					</div>
+				</div>
+			</div>
+
+			
+			
+		
+			<div style="text-align:center;padding:10px;color:#888888;background-color:#E8E8E8;">
+				<span>&copy; ho4040@nooslab.com | <a ng-click="openPayment()">2016</a></span> &nbsp;
+				<span class="fb-share-button pull-right" data-href="https://simbudget.nooslab.com" data-layout="button_count" data-mobile-iframe="true"></span>
+			</div>
+			
+		</div>
+		<script src="extra.js"></script>
+
+
+
+		<script type="text/ng-template" id="paymentModal.html">
+			<div class="modal-header">
+				<h3 class="modal-title">Upgrade!<small>(test)</small> <button class="btn btn-default pull-right" type="button" ng-click="close()">X</button></h3>
+			</div>
+			<div class="modal-body">
+				<form action="https://www.sandbox.paypal.com/cgi-bin/webscr" method="post">
+					<input type="hidden" name="cmd" value="_xclick">
+					<input type="hidden" name="business" value="ho4040-facilitator@nooslab.com">
+					<input type="hidden" name="charset" value="UTF-8">
+					<input type="hidden" name="currency_code" value="USD">
+					<input type="hidden" name="amount" value="0.9">
+					<input type="hidden" name="item_number" value="ITEM0001">
+					<input type="hidden" name="item_name" value="Test Item 0001">
+					<div style="width:100%;text-align:center;">
+						<h3 style="margin-top:5px;">Premium plan</h3>
+					</div>
+					<div>
+						<ul>
+							<li>Document create limit: 20</li>
+							<li>Rule per Document limit: 100</li>
+							<li>Shareing Document with team</li>
+							<li>More graphs</li>
+						</ul>
+					</div>
+					<div style="width:100%;text-align:center;padding:0px 0px 20px 0px;">
+						<b>Just 9 cent / month!</b>
+					</div>
+					<div style="width:100%;text-align:center;">
+						<input type="image" name="submit" border="0" src="https://www.paypalobjects.com/en_US/i/btn/btn_buynow_LG.gif" alt="PayPal - The safer, easier way to pay online">
+					</div>
+				</form>
+			</div>
+		</script>
+		
+	</body>
+
+
+
+
+</html>
+
+
